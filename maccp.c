@@ -18,13 +18,6 @@
 #include <netinet/ether.h>
 #include <unistd.h>
 
-#define DEST_MAC0	0x00
-#define DEST_MAC1	0x00
-#define DEST_MAC2	0x00
-#define DEST_MAC3	0x00
-#define DEST_MAC4	0x01
-#define DEST_MAC5	0x00
-
 #define MTU		1500
 
 FILE *fp;
@@ -33,6 +26,7 @@ unsigned long flen;
 char *buf;
 int sockfd;
 struct ether_header *eh;
+struct ether_addr *destmac;
 struct sockaddr_ll sockaddr;
 
 int open_file(char *path, char *mode)
@@ -105,12 +99,12 @@ int prep_send(char *iface)
 	eh->ether_shost[3] = ((uint8_t *)&if_mac.ifr_hwaddr.sa_data)[3];
 	eh->ether_shost[4] = ((uint8_t *)&if_mac.ifr_hwaddr.sa_data)[4];
 	eh->ether_shost[5] = ((uint8_t *)&if_mac.ifr_hwaddr.sa_data)[5];
-	eh->ether_dhost[0] = DEST_MAC0;
-	eh->ether_dhost[1] = DEST_MAC1;
-	eh->ether_dhost[2] = DEST_MAC2;
-	eh->ether_dhost[3] = DEST_MAC3;
-	eh->ether_dhost[4] = DEST_MAC4;
-	eh->ether_dhost[5] = DEST_MAC5;
+	eh->ether_dhost[0] = destmac->ether_addr_octet[0];
+	eh->ether_dhost[1] = destmac->ether_addr_octet[1];
+	eh->ether_dhost[2] = destmac->ether_addr_octet[2];
+	eh->ether_dhost[3] = destmac->ether_addr_octet[3];
+	eh->ether_dhost[4] = destmac->ether_addr_octet[4];
+	eh->ether_dhost[5] = destmac->ether_addr_octet[5];
 
 	/* Index of the network device */
 	sockaddr.sll_ifindex = if_idx.ifr_ifindex;
@@ -119,12 +113,12 @@ int prep_send(char *iface)
 	sockaddr.sll_halen = ETH_ALEN;
 
 	/* Destination MAC */
-	sockaddr.sll_addr[0] = DEST_MAC0;
-	sockaddr.sll_addr[1] = DEST_MAC1;
-	sockaddr.sll_addr[2] = DEST_MAC2;
-	sockaddr.sll_addr[3] = DEST_MAC3;
-	sockaddr.sll_addr[4] = DEST_MAC4;
-	sockaddr.sll_addr[5] = DEST_MAC5;
+	sockaddr.sll_addr[0] = destmac->ether_addr_octet[0];
+	sockaddr.sll_addr[1] = destmac->ether_addr_octet[1];
+	sockaddr.sll_addr[2] = destmac->ether_addr_octet[2];
+	sockaddr.sll_addr[3] = destmac->ether_addr_octet[3];
+	sockaddr.sll_addr[4] = destmac->ether_addr_octet[4];
+	sockaddr.sll_addr[5] = destmac->ether_addr_octet[5];
 
 	return 0;
 }
@@ -292,6 +286,13 @@ void usage(char *name)
 	exit(0);
 }
 
+void parse_mac(char *mac, char *name)
+{
+	destmac = ether_aton(mac);
+	if (!destmac)
+		usage(name);
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -300,6 +301,7 @@ int main(int argc, char *argv[])
 		usage(argv[0]);
 
 	if (!strcmp(argv[1], "-s")) {
+		parse_mac(argv[3], argv[0]);
 		printf("Sending file %s to %s\n", argv[4], argv[3]);
 		ret = maccp_send(argv[2], argv[4]);
 	} else if (!strcmp(argv[1], "-r")) {
